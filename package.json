@@ -1,0 +1,18 @@
+{
+  "name": "pc-dictationary2",
+  "version": "1.0.0",
+  "description": "",
+  "main": "mkDict.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Manfred Cheung @ UofT",
+  "license": "MIT",
+  "dependencies": {
+    "bluebird": "^3.5.0",
+    "fs-promise": "^2.0.0",
+    "html-entities": "^1.2.0",
+    "lodash": "^4.17.4",
+    "node-fetch": "^1.6.3"
+  }
+}

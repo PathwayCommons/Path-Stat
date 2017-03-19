@@ -6,12 +6,14 @@ var Entities = require('html-entities').AllHtmlEntities;
 entities = new Entities();
 var fetch = require('node-fetch');
 fetch.Promise = Promise;
+var sbgnConverter = require('sbgnml-to-cytoscape');
 
 console.log("Begin download ...");
 console.log("");
 
-var baseUrl = "http://beta.pathwaycommons.org/pc2/search.json?q=*&type=pathway";
-var numPagesToFetch = fetch(baseUrl)
+var baseUrlSearch = "http://beta.pathwaycommons.org/pc2/search.json?q=*&type=pathway";
+var baseUrlGet = "http://beta.pathwaycommons.org/pc2/get.json?format=SGBN&uri=";
+var numPagesToFetch = fetch(baseUrlSearch)
   .then(res => res.json())
   .then(resObj => {
     var numHitsTotal = resObj.numHits;
@@ -25,7 +27,7 @@ function fetchSearch(baseUrl, pageNumber) {
   return new Promise(function(resolve, reject) {
     var wrappedFetch = function(n) {
       if (n >= 0) {
-        fetch(baseUrl + "&page=" + pageNumber)
+        fetch(baseUrlSearch + "&page=" + pageNumber)
           .then(res => res.json())
           .then(searchObj => {
             if (typeof searchObj === "object") {
@@ -44,7 +46,30 @@ function fetchSearch(baseUrl, pageNumber) {
     wrappedFetch(5);
   });
 }
-
+function fetchGet(uri) {
+  // Some code taken from fetch-retry
+  return new Promise(function(resolve, reject) {
+    var wrappedFetch = function(n) {
+      if (n >= 0) {
+        fetch(baseUrlGet + uri)
+          .then(res => res.text())
+          .then(searchStr => {
+            if (typeof searchStr === "string") {
+              return sbgnConverter(searchStr);
+            } else {
+              throw new Error();
+            }
+          })
+          .then(resolvable => resolve(resolvable))
+          .catch((e) => {
+            console.log(e.message);
+            wrappedFetch(--n);
+          });
+      }
+    }
+    wrappedFetch(5);
+  });
+}
 var pathway_array = numPagesToFetch
   .then(numPages => {
     return Array(numPages).fill(0).map(function(x, i) {
@@ -53,7 +78,7 @@ var pathway_array = numPagesToFetch
   })
   .map(pageNumber => {
     console.log(pageNumber);
-    return fetchSearch(baseUrl, pageNumber);
+    return fetchSearch(baseUrlSearch, pageNumber);
   }, {
     concurrency: 6
   })
@@ -72,6 +97,35 @@ var pathway_list = pathway_array.then(pathwayObject => {
     return lodash.pick(pathway, ["name", "size", "dataSource"]);
   });
 });
+
+// Use pathway_array to generate object where the key are pathways and the values are number of referenced symbols
+var uri_list = pathway_array.then(pathwayObject => {
+     return pathwayObject.map(pathway => {
+     return lodash.pick(pathway, ["uri"]);
+   });
+  })
+  .map(uri => {
+    console.log("Getting " + uri);
+    return fetchGet(uri).then( jsonData => {
+    console.log("START");
+    console.log(jsonData);
+    console.log({
+      numNodes: jsonData.nodes.length,
+      numEdges: jsonData.edges.length,
+      numClassCompartment: jsonData.map(node => node.data.class === "compartment" ? 1 : 0).reduce((acc, cur) => acc + cur),
+      compartmentLabels: jsonData.map(node => node.data.class === "compartment" ? node.data.label : null),
+      numChildNodes: jsonData.map(node => node.data.parent !== "" ? 1 : 0).reduce((acc, cur) => acc + cur)
+    });
+    return {
+      numNodes: jsonData.nodes.length,
+      numEdges: jsonData.edges.length,
+      numClassCompartment: jsonData.map(node => node.data.class === "compartment" ? 1 : 0).reduce((acc, cur) => acc + cur),
+      compartmentLabels: jsonData.map(node => node.data.class === "compartment" ? node.data.label : null),
+      numChildNodes: jsonData.map(node => node.data.parent !== "" ? 1 : 0).reduce((acc, cur) => acc + cur)
+    };
+  })}, {
+    concurrency: 12
+  });
 
 Promise.all([pathway_array, pathway_list]).then(promiseArray => {
   console.log("");

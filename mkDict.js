@@ -55,7 +55,7 @@ var pathway_array = numPagesToFetch
     console.log(pageNumber);
     return fetchSearch(baseUrl, pageNumber);
   }, {
-    concurrency: 6
+    concurrency: 12
   })
   .then(arrayList => {
     output = [];
@@ -68,9 +68,12 @@ var pathway_array = numPagesToFetch
 
 // Use pathway_array to generate object where the key are pathways and the values are number of referenced symbols
 var pathway_list = pathway_array.then(pathwayObject => {
-  return pathwayObject.map(pathway => {
-    return lodash.pick(pathway, ["name", "size", "dataSource"]);
-  });
+  return pathwayObject
+    .map(pathway => lodash.pick(pathway, ["name", "size", "numParticipants", "numProcesses", "dataSource"]))
+    .map(pathway => {
+      pathway.dataSource = pathway.dataSource[0];
+      return pathway;
+    });
 });
 
 Promise.all([pathway_array, pathway_list]).then(promiseArray => {

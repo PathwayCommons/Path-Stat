@@ -6,8 +6,10 @@ const fetch = require('node-fetch');
 fetch.Promise = Promise;
 
 const sbgnConverter = require('sbgnml-to-cytoscape');
+const datasource = (source) => `datasource=${source}`;
+const datasources = `&${datasource('reactome')}&${datasource('pid')}&${datasource('smpdb')}&${datasource('transfac')}&${datasource('inoh')}`;
 
-const baseUrlSearch = 'http://beta.pathwaycommons.org/pc2/search.json?q=*&type=pathway';
+const baseUrlSearch = 'http://beta.pathwaycommons.org/pc2/search.json?q=*&type=pathway' + datasources;
 const baseUrlGet = 'http://beta.pathwaycommons.org/pc2/get?format=sbgn&uri=';
 
 const getNumPages = fetch(baseUrlSearch)
@@ -17,7 +19,6 @@ const getNumPages = fetch(baseUrlSearch)
   });
 
 function fetchSearch(baseUrl, pageNumber) {
-  // Some code taken from fetch-retry
   return new Promise(function(resolve, reject) {
     var wrappedFetch = function(numTries) {
       if (numTries >= 0) {
@@ -40,61 +41,30 @@ function fetchSearch(baseUrl, pageNumber) {
   });
 }
 function fetchGet(uri) {
-  // Some code taken from fetch-retry
   return new Promise(function(resolve, reject) {
     var wrappedFetch = function(numTries) {
-      if (numTries >= 0) {
-        fetch(baseUrlGet + uri)
-          .then(res => res.text())
-          .then(searchStr => {
-            return sbgnConverter(searchStr);
-          })
-          .then(resolvable => resolve(resolvable))
-          .catch((e) => {
-            wrappedFetch(--numTries);
-          });
-      }
+      fetch(baseUrlGet + uri)
+        .then(res => res.text())
+        .then(searchStr => searchStr)
+        .then(resolvable => resolve(resolvable))
+        .catch((e) => console.log(e));
     };
     wrappedFetch(5);
   });
 }
-var pathway_array = getNumPages
+const pathwayPages = getNumPages
   .then(numPages => [...Array(numPages).keys()])
   .map(pageNumber => fetchSearch(baseUrlSearch, pageNumber))
   .then(arrayList => [].concat(...arrayList))
   .catch((e) => console.log(e));
 
-pathway_array.then(output => console.log(output));
+const pathwaySbgn = pathwayPages.then(pg => {
+  return pg.map(pathway => pathway.uri);
+});
 
-// // Use pathway_array to generate object where the key are pathways and the values are number of referenced symbols
-// var pathway_list = pathway_array.then(pathwayObject => {
-//   return pathwayObject.map(pathway => {
-//     return lodash.pick(pathway, ['name', 'size', 'dataSource']);
-//   });
-// });
-//
-// // Use pathway_array to generate object where the key are pathways and the values are number of referenced symbols
-// var uri_list = pathway_array.then(pathwayObject => {
-//      return pathwayObject.map(pathway => {
-//      return lodash.pick(pathway, ['uri']);
-//    });
-//   })
-//   .map(uri => {
-//     console.log(uri);
-//     return fetchGet(uri.uri).then( jsonData => {
-//     console.log('START');
-//     console.log(jsonData);
-//     return {
-//       numNodes: jsonData.nodes.length,
-//       numEdges: jsonData.edges.length,
-//       numClassCompartment: jsonData.map(node => node.data.class === 'compartment' ? 1 : 0).reduce((acc, cur) => acc + cur),
-//       compartmentLabels: jsonData.map(node => node.data.class === 'compartment' ? node.data.label : null),
-//       numChildNodes: jsonData.map(node => node.data.parent !== '' ? 1 : 0).reduce((acc, cur) => acc + cur)
-//     };
-//   })}, {
-//     concurrency: 12
-//   });
-//
+pathwaySbgn.then(output => console.log(JSON.stringify(output, null, 2)));
+
+
 // Promise.all([pathway_array, pathway_list]).then(promiseArray => {
 //   console.log('');
 //   console.log('Processing completed');

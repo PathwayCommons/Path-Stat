@@ -1,12 +1,12 @@
 {
-  "name": "pc-dictationary2",
+  "name": "path-stat",
   "version": "1.0.0",
   "description": "",
   "main": "mkDict.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Manfred Cheung @ UofT",
+  "author": "Manfred Cheung @ UofT <mj3cheun@uwaterloo.ca>",
   "license": "MIT",
   "dependencies": {
     "bluebird": "^3.5.0",

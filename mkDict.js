@@ -1,16 +1,11 @@
 const Promise = require('bluebird');
-const pick = require('lodash.pick');
-const fs = require('fs');
-const fsp = require('fs-promise');
 const fetch = require('node-fetch');
 fetch.Promise = Promise;
 
-const sbgnConverter = require('sbgnml-to-cytoscape');
 const datasource = (source) => `datasource=${source}`;
 const datasources = `&${datasource('reactome')}&${datasource('pid')}&${datasource('smpdb')}&${datasource('transfac')}&${datasource('inoh')}`;
 
 const baseUrlSearch = 'http://beta.pathwaycommons.org/pc2/search.json?q=*&type=pathway' + datasources;
-const baseUrlGet = 'http://beta.pathwaycommons.org/pc2/get?format=sbgn&uri=';
 
 const getNumPages = fetch(baseUrlSearch)
   .then(result => result.json())
@@ -40,18 +35,7 @@ function fetchSearch(baseUrl, pageNumber) {
     wrappedFetch(5);
   });
 }
-function fetchGet(uri) {
-  return new Promise(function(resolve, reject) {
-    var wrappedFetch = function(numTries) {
-      fetch(baseUrlGet + uri)
-        .then(res => res.text())
-        .then(searchStr => searchStr)
-        .then(resolvable => resolve(resolvable))
-        .catch((e) => console.log(e));
-    };
-    wrappedFetch(5);
-  });
-}
+
 const pathwayPages = getNumPages
   .then(numPages => [...Array(numPages).keys()])
   .map(pageNumber => fetchSearch(baseUrlSearch, pageNumber))

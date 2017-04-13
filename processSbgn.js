@@ -4,12 +4,15 @@ const convert = require('sbgnml-to-cytoscape');
 const baseDir = '/Users/dylanfong/Documents/workspace/work/pathway-commons-ecosystem/path-stat/sbgn/';
 
 const files = fs.readdirSync(baseDir);
-const sbgnFiles = files
+let sbgnFiles = files
 .map(f => fs.readFileSync(baseDir + f, 'utf-8'))
 .filter(f => f.startsWith('<?xml'))
-.map(f => convert(f))
-.filter(graphJSON => graphJSON.nodes.length !== 0);
+.map(f => convert(f));
 
+const empties = sbgnFiles.filter(graphJSON => graphJSON.nodes.length === 0);
+sbgnFiles = sbgnFiles.filter(graphJSON => graphJSON.nodes.length !== 0);
+
+console.log(`${empties.length} files with nothing in them`);
 console.log(`processing ${sbgnFiles.length} JSON pathways`);
 
 let compartments = 0;
@@ -74,8 +77,8 @@ const topPercentile = sbgnFiles.sort((a, b) => {
 })
 .map(f => f.nodes.length);
 
-// const sortedKeyLabels = new Map([...labels.entries()].sort((a,b) =>  a[1]>b[1]? -1:a[1]<b[1]?1:0));
-// const sortedValueLabels = [...labels.entries()].sort((a, b) => a.value[1] > b.value[1]);
+const sortedKeyLabels = new Map([...labels.entries()].sort((a,b) =>  a[0]>b[0]? 1:a[0]<b[0]? -1:0));
+const sortedValueLabels = new Map([...labels.entries()].sort((a, b) => a[1]>b[1]? -1:a[1]<b[1]?1:0));
 
 
 console.log(`average number of compartments: ${compartments / sbgnFiles.length}`);
@@ -93,9 +96,10 @@ console.log(`std dev. edges: ${sigmaEdges}`);
 
 console.log(`average number of nodes: ${meanNodes}`);
 console.log(`average number of edges: ${meanEdges}`);
-console.log(`labels: `);
-// sortedKeyLabels.forEach((val, key, map) => console.log(`m[${key}] = ${val}`));
-// console.log()
+console.log(`labels sorted by key: `);
+sortedKeyLabels.forEach((val, key, map) => console.log(`m[${key}] = ${val}`));
+console.log(`labels sorted by occurences: `);
+sortedValueLabels.forEach((val, key, map) => console.log(`m[${key}] = ${val}`));
 
 console.log('top percentile: ' + JSON.stringify(topPercentile, null, 4));
 console.log('top percentile length: ' + topPercentile.length);

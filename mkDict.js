@@ -3,7 +3,7 @@ const fetch = require('node-fetch');
 fetch.Promise = Promise;
 
 const datasource = (source) => `datasource=${source}`;
-const datasources = `&${datasource('reactome')}&${datasource('pid')}&${datasource('smpdb')}&${datasource('transfac')}&${datasource('inoh')}`;
+const datasources = `&${datasource('reactome')}&${datasource('pid')}&${datasource('smpdb')}&${datasource('humancyc')}&${datasource('inoh')}&${datasource('panther')}&${datasource('kegg')}&${datasource('netpath')}&${datasource('wikipathways')}`;
 
 const baseUrlSearch = 'http://beta.pathwaycommons.org/pc2/search.json?q=*&type=pathway' + datasources;
 

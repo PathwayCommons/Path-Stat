@@ -1,87 +1,108 @@
 const fs = require('fs');
 const convert = require('sbgnml-to-cytoscape');
 
-const baseDir = '/Users/dylanfong/Documents/workspace/work/pathway-commons-ecosystem/path-stat/sbgn/';
+const baseDir = '//Users/dylanfong/src/work/pc_ecosystem/path-stat/sbgn/';
 
 const files = fs.readdirSync(baseDir);
-let sbgnFiles = files
-.map(f => fs.readFileSync(baseDir + f, 'utf-8'))
-.filter(f => f.startsWith('<?xml'))
-.map(f => convert(f));
 
-const empties = sbgnFiles.filter(graphJSON => graphJSON.nodes.length === 0);
-sbgnFiles = sbgnFiles.filter(graphJSON => graphJSON.nodes.length !== 0);
+console.log(files.length);
+let numEmpties = 0;
 
-console.log(`${empties.length} files with nothing in them`);
-console.log(`processing ${sbgnFiles.length} JSON pathways`);
-
-let compartments = 0;
 let maxNumCompartments = 0;
-let minNodes = 10000000000000;
+let minNodes = Infinity;
 let maxNodes = 0;
-let minEdges = 1000000000000;
+let minEdges = Infinity;
 let maxEdges = 0;
+
 const labels = new Map();
-let numNodes = 0;
-let numEdges = 0;
 
-for (let meansJSON of sbgnFiles) {
-  numNodes += meansJSON.nodes.length;
-  numEdges += meansJSON.edges.length;
-}
+let totalNodes = 0;
+let totalEdges = 0;
+let totalCompartments = 0;
 
-const meanNodes = numNodes / sbgnFiles.length;
-const meanEdges = numEdges / sbgnFiles.length;
+const numNodeValues = [];
+const numEdgeValues = [];
 
-let sqDiffNodes = 0;
-let sqDiffEdges = 0;
+for (let fname of files) {
+  const sbgnJSON = convert(fs.readFileSync(baseDir + fname, 'utf-8'));
 
-for (let sbgnJSON of sbgnFiles) {
-  const c = sbgnJSON.nodes.filter((node) => node.data.class === 'compartment');
-  for (let comp of c) {
+  const num_nodes = sbgnJSON.nodes.length;
+  const num_edges = sbgnJSON.edges.length;
+
+  // skip empty files and record
+  if (num_nodes === 0) {
+    numEmpties++;
+    continue;
+    console.log('here');
+  }
+
+  // for std deviation
+  numNodeValues.push(num_nodes);
+  numEdgeValues.push(num_edges);
+
+  // count num edges and nodes
+  totalNodes += num_nodes;
+  totalEdges += num_edges;
+
+  // count compartments
+  const compartments = sbgnJSON.nodes.filter((node) => node.data.class === 'compartment');
+  totalCompartments += compartments.length;
+
+  for (let comp of compartments) {
     if (labels.has(comp.data.id)) {
       labels.set(comp.data.id, labels.get(comp.data.id) + 1);
     } else {
       labels.set(comp.data.id, 1);
     }
   }
-  if (c.length > maxNumCompartments) {
-    maxNumCompartments = c.length;
+
+  // find max compartments
+  if (compartments.length > maxNumCompartments) {
+    maxNumCompartments = compartments.length;
   }
 
-  if (sbgnJSON.nodes.length > maxNodes) {
-    maxNodes = sbgnJSON.nodes.length;
-  }
-  if (sbgnJSON.nodes.length < minNodes) {
-    minNodes =sbgnJSON.nodes.length;
+  // find max num nodes
+  if (num_nodes > maxNodes) {
+    maxNodes = num_nodes;
   }
 
-  if (sbgnJSON.edges.length > maxEdges) {
-    maxEdges = sbgnJSON.edges.length;
+  // find min num nodes
+  if (num_nodes < minNodes) {
+    minNodes = num_nodes;
   }
-  if (sbgnJSON.edges.length < minEdges) {
-    minEdges = sbgnJSON.edges.length;
-  }
-  compartments += c.length;
 
-  sqDiffNodes += Math.pow(sbgnJSON.nodes.length - meanNodes, 2);
-  sqDiffEdges += Math.pow(sbgnJSON.edges.length - meanEdges, 2);
+  // find max num edges
+  if (num_edges > maxEdges) {
+    maxEdges = num_edges;
+  }
+
+  // find min num edges
+  if (num_edges < minEdges) {
+    minEdges = num_edges;
+  }
 }
 
 
-const sigmaNodes = Math.sqrt((sqDiffNodes) / (sbgnFiles.length - 1));
-const sigmaEdges = Math.sqrt((sqDiffEdges) / (sbgnFiles.length - 1));
+const meanNodes = totalNodes / files.length;
+const meanEdges = totalEdges / files.length;
 
-const topPercentile = sbgnFiles.sort((a, b) => {
-  return a.nodes.length > b.nodes.length ? -1 : a.nodes.length < b.nodes.length ? 1 : 0;
-})
-.map(f => f.nodes.length);
+const sqDiffNodes = numNodeValues.reduce((acc, val) => {
+  return acc + Math.pow(val - meanNodes, 2);
+});
 
-const sortedKeyLabels = new Map([...labels.entries()].sort((a,b) =>  a[0]>b[0]? 1:a[0]<b[0]? -1:0));
-const sortedValueLabels = new Map([...labels.entries()].sort((a, b) => a[1]>b[1]? -1:a[1]<b[1]?1:0));
+const sqDiffEdges = numEdgeValues.reduce((acc, val) => {
+  return acc + Math.pow(val - meanEdges, 2);
+});
 
+const stdDevNodes = Math.sqrt((sqDiffNodes) / (files.length - 1));
+const stdDevEdges = Math.sqrt((sqDiffEdges) / (files.length - 1));
 
-console.log(`average number of compartments: ${compartments / sbgnFiles.length}`);
+console.log(`${numEmpties} files with nothing in them`);
+
+console.log(`average number of nodes: ${meanNodes}`);
+console.log(`average number of edges: ${meanEdges}`);
+console.log(`average number of compartments: ${totalCompartments / files.length}`);
+
 console.log(`largest # of compartments: ${maxNumCompartments}`);
 
 console.log(`max number of nodes: ${maxNodes}`);
@@ -90,17 +111,27 @@ console.log(`min number of nodes: ${minNodes}`);
 console.log(`max number of edges: ${maxEdges}`);
 console.log(`min number of edges: ${minEdges}`);
 
-console.log(`std dev. nodes: ${sigmaNodes}`);
-console.log(`std dev. edges: ${sigmaEdges}`);
+
+console.log(`std dev. nodes: ${stdDevNodes}`);
+console.log(`std dev. edges: ${stdDevEdges}`);
+
+const sortedKeyLabels = new Map([...labels.entries()].sort((a,b) =>  a[0]>b[0]? 1:a[0]<b[0]? -1:0));
+const sortedValueLabels = new Map([...labels.entries()].sort((a, b) => a[1]>b[1]? -1:a[1]<b[1]?1:0));
+
+// console.log('**********************');
+// console.log(`labels sorted by key: `);
+// sortedKeyLabels.forEach((val, key, map) => console.log(`m[${key}] = ${val}`));
+// console.log('**********************');
+// console.log(`labels sorted by occurences: `);
+// sortedValueLabels.forEach((val, key, map) => console.log(`m[${key}] = ${val}`));
 
 
-console.log(`average number of nodes: ${meanNodes}`);
-console.log(`average number of edges: ${meanEdges}`);
-console.log(`labels sorted by key: `);
-sortedKeyLabels.forEach((val, key, map) => console.log(`m[${key}] = ${val}`));
-console.log(`labels sorted by occurences: `);
-sortedValueLabels.forEach((val, key, map) => console.log(`m[${key}] = ${val}`));
+// const topPercentile = sbgnFiles.sort((a, b) => {
+//   return a.nodes.length > b.nodes.length ? -1 : a.nodes.length < b.nodes.length ? 1 : 0;
+// })
+// .map(f => f.nodes.length);
 
-console.log('top percentile: ' + JSON.stringify(topPercentile, null, 4));
-console.log('top percentile length: ' + topPercentile.length);
+
+// console.log('top percentile: ' + JSON.stringify(topPercentile, null, 4));
+// console.log('top percentile length: ' + topPercentile.length);
 

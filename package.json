@@ -10,10 +10,14 @@
   "license": "MIT",
   "dependencies": {
     "bluebird": "^3.5.0",
+    "cytoscape": "^3.0.0",
+    "cytoscape-cose-bilkent": "^1.6.5",
     "fs-promise": "^2.0.0",
     "html-entities": "^1.2.0",
+    "json2csv": "^3.7.3",
     "lodash.pick": "^4.4.0",
     "node-fetch": "^1.6.3",
+    "sbgn-renderer": "^1.1.1",
     "sbgnml-to-cytoscape": "^3.0.2"
   }
 }

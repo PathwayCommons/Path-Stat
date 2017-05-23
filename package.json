@@ -10,15 +10,13 @@
   "license": "MIT",
   "dependencies": {
     "bluebird": "^3.5.0",
-    "cytoscape": "^3.0.0",
+    "cytoscape": "https://github.com/d2fong/cytoscape.js.git#unstable",
     "cytoscape-cose-bilkent": "^1.6.5",
-    "cytosnap": "^1.1.2",
-    "fs-promise": "^2.0.0",
+    "cytosnap": "https://github.com/d2fong/cytosnap.git#upgrade-cy-3",
     "html-entities": "^1.2.0",
     "json2csv": "^3.7.3",
     "lodash.pick": "^4.4.0",
-    "node-fetch": "^1.6.3",
-    "sbgn-renderer": "^1.1.1",
+    "sbgn-renderer": "https://github.com/PathwayCommons/sbgn-renderer.git#2.0",
     "sbgnml-to-cytoscape": "^3.0.2"
   }
 }
